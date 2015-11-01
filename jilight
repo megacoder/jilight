@@ -1,0 +1,64 @@
+#!//bin/python
+# vim: noet ts=4 sw=4
+
+import	cgi
+import	sys
+
+class	Highlighter( object ):
+	def	__init__( self, out = sys.stdout, lang = None ):
+		self.out    = out
+		self.flavor = ' class="{0}"'.format( lang ) if lang else ""
+	def	show( self, s ):
+		self.out.write( s )
+	def	highlight( self, fn, lang = None ):
+		with open(fn) as f:
+			self.prettify( f, fn )
+	def	prettify( self, f = sys.stdin, fn = '{stdin}' ):
+		self.show( '<html><head><title>{0}</title>\n'.format( fn ) )
+		self.show( '<link rel="stylesheet" href="https://cdn.dnscheck.co/highlight.js/8.7/styles/default.css">\n' +
+			'<script src="https://cdn.dnscheck.co/highlight.js/8.7/highlight.pack.js"></script>\n' +
+			'<script>hljs.initHighlightingOnLoad();</script>\n'
+		)
+		self.show( '</head><body>\n' )
+		self.show( '<div><pre><code{0}>'.format( self.flavor ) )
+		for line in f:
+			self.show( cgi.escape( line ) )
+		self.show( '</code></pre></div>\n' )
+		self.show( '</body></html>\n' )
+
+if __name__ == '__main__':
+	import	optparse
+	version = '1.0.0'
+	usage = 'Usage: %prog [options] [file..]'
+	p = optparse.OptionParser(
+		version = version,
+		usage = usage,
+		description = 'Wrap file in Highlight.js colorization.',
+		epilog=('Leverage the excellent Highlight.js javascript '
+		  'tool to highlight regular files from the command line. '
+		  'Refer to https://highlightjs.org for more information.'
+		)
+	)
+	p.add_option(
+		'-l', '--lang', dest='lang', metavar='LANG',
+		default=None,
+		help = 'Type of input file; default is auto-dtect.'
+	)
+	p.add_option(
+		'-o', '--out', dest='output', metavar='FILE',
+		default = None,
+		help = 'Write output to FILE; defaults to stdout.'
+	)
+	opts, args = p.parse_args()
+	if opts.output:
+		ofile  = open( opts.output, 'w' )
+	else:
+		ofile  = sys.stdout
+	if len( args ):
+		for fn in args:
+			hl = Highlighter( lang = opts.lang, out = ofile )
+			hl.highlight( fn )
+	else:
+		hl = Highlighter( lang = opts.lang, out = ofile )
+		hl.prettify()
+	exit( 0 )
